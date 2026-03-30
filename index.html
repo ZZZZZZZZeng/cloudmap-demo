@@ -1,109 +1,357 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <title>大盘云图 -大盘走势，尽在掌握</title>
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
-    <meta http-equiv="X-UA-Compatible" content="IE=10">
-    <meta name="viewport" content="width=1024"><meta name="description" content="">
-    <meta name="keywords" content="">
-    <meta http-equiv="imagetoolbar" content="no">
-    <meta http-equiv="pragma" content="no-cache">
-    <meta http-equiv="cache-control" content="no-cache">
-    <meta http-equiv="Expires" content="-1">
-    <meta http-equiv="Refresh" content="3600">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <link rel="stylesheet" href="Chinese_Stock_Treemap_files/base.css" />
-    <link rel="stylesheet" href="Chinese_Stock_Treemap_files/common.css" />
-    <link rel="stylesheet" href="Chinese_Stock_Treemap_files/map.css" />
-    <link rel="stylesheet" href="Chinese_Stock_Treemap_files/znty.css" type="text/css">
-    <style type="text/css">
-        #tb_header{display: none;}
-        .content{width: 100%;}
-        .content.map .view{padding-left: 0;height: 50px;background:#383b44;padding: 7px 0 13px 0;}
-        .content.map .view .view-select{width: 387px;border-right:none;margin-left: 16px;}
-        .content.map .view .map_nav_a{font-size: 16px;line-height: 45px;display: inline-block;width: 112px;height: 45px;text-align: center;padding:0;color: #fefefe;background: #535663;border-radius: 3px;}
-        .content.map .view .map_nav_a.is-active{font-weight: 400;background: #ee5752;}
-        .pull-right{display: none;}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大盘云图 - 实时行情热力图</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0e17;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+        }
+        .header {
+            height: 50px;
+            background: #1e293b;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #e5e7eb;
+        }
+        .index-bar {
+            display: flex;
+            gap: 30px;
+        }
+        .index-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .index-name {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-bottom: 2px;
+        }
+        .index-value {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .index-change {
+            font-size: 12px;
+            margin-left: 4px;
+        }
+        .up { color: #ef4444; }
+        .down { color: #22c55e; }
+        .flat { color: #9ca3af; }
+        .main {
+            height: calc(100vh - 90px);
+            position: relative;
+        }
+        #chart {
+            width: 100%;
+            height: 100%;
+        }
+        .footer {
+            height: 40px;
+            background: #1e293b;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+        }
+        .legend {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+        .legend-item {
+            width: 40px;
+            height: 16px;
+            text-align: center;
+            font-size: 10px;
+            line-height: 16px;
+            color: #fff;
+        }
+        .time {
+            font-size: 12px;
+            color: #9ca3af;
+        }
     </style>
-    <script type="text/javascript">FinvizSettings = {hasUserPremium: false, name: ""};</script>
 </head>
-<body class="has-map" style="margin:0" bgcolor="#ffffff">
-
-<div class="content map">
-
-    <div class="narrow">
-        <a id="narrow"><img src="Chinese_Stock_Treemap_files/narrow.png"/></a>
+<body>
+    <div class="header">
+        <div class="logo">📈 大盘云图</div>
+        <div class="index-bar" id="indexBar"></div>
     </div>
-    
-    <div class="container is-wide"  >
-        <div class="view">
-            <div class="pull-left view-select" style="width:200px">
-                <h1 style="color:#bdbdbd; font-size:30px; display: inline;">大盘云图</h1>
-            </div>
-            
-            <div class="zoom pull-right"></div>
-            
-            <div class="fr enlarge">
-                <span class="currentTime"></span>
-                <a id="enlage"><img src="Chinese_Stock_Treemap_files/enlarge.png"/></a>
-            </div>
-            
-        </div>
-        <div class="map-scan">
-            <div class="sidebar sidebar2">
-                <div class="">
-                    <ul class="left_nav">
-                        <li class="active"><a>全部A股</a></li>
-                        <li><a>上证A股</a></li>
-                        <li><a>深证A股</a></li>
-                        <li><a>创业板</a></li>
-                    </ul>
-                    <br>
-                    <select id="select-change" style="visibility: visible;">
-                        <option value="mkt_idx.cur_chng_pct" selected="selected" color="">涨跌幅</option>
-                        <option value="mkt_idx.chng_pct_week" color="_5">近1周涨跌幅</option>
-                        <option value="perf_idx.chng_pct_month" color="_10">近1月涨跌幅</option>
-                        <option value="perf_idx.chng_pct_3month" color="_15">近3月涨跌幅</option>
-                        <option value="perf_idx.chng_pct_6month" color="_20">近6月涨跌幅</option>
-                        <option value="perf_idx.chng_pct_year" color="_25">近1年涨跌幅</option>
-                        <option value="perf_idx.chng_pct_year_sofar" color="_25">今年以来涨跌幅</option>
-                        <option value="mkt_idx.rela_volume" color="_relvol">相对成交量</option>
-                        <option value="mkt_idx.peg" color="_peg">PEG</option>
-                        <option value="mkt_idx.ps" color="_ps">市销率</option>
-                        <option value="mkt_idx.pb" color="_pb">市净率</option>
-                        <option value="mkt_idx.div_rate" color="_div">股息率</option>
-                        <option value="mkt_idx.pe_ttm" color="_pe">市盈率(TTM)</option>
-                        <option value="mkt_idx.fir_fcst_pe" color="_fpe">预测市盈率</option>
-                        <option value="fin_idx.eps_5year" color="_eps5y">EPS增长率(过去5年)</option>
-                        <option value="act_date" color="_earndate">业绩公布日</option>
-                    </select>
-                </div>
-                <div class="search">
-                    <!--在map.bundle.js中函数93:渲染-->
-                </div>
-            </div>
-            <div class="content-view-map">
-                <div id="map" class="">
-                    <div id="body"></div>
-                    <div id="legend"></div>
-                    <div id="hover-wrapper"></div>
-                </div>
-                <div class="map_bt clearfix map_bt_min">
-                    <div class="map_scale map_scale_min"></div>
-                </div>
-            </div>
-        </div>
-        <div id="modal"></div>
+    <div class="main">
+        <div id="chart"></div>
     </div>
-</div>
-<script src="Chinese_Stock_Treemap_files/jquery-2.2.1.min.js"></script>
-<script src="Chinese_Stock_Treemap_files/d3-json.js"></script>
-<script src="Chinese_Stock_Treemap_files/com.js"></script>
-<script src="Chinese_Stock_Treemap_files/react-with-addons.min.js"></script>
-<script src="Chinese_Stock_Treemap_files/d3.js"></script>
-<script src="Chinese_Stock_Treemap_files/hammer.min.js"></script>
-<script src="Chinese_Stock_Treemap_files/map.bundle.js"></script>
-<script src="Chinese_Stock_Treemap_files/map.js"></script>
+    <div class="footer">
+        <div class="legend">
+            <div class="legend-item" style="background: #00d641;">-4%</div>
+            <div class="legend-item" style="background: #1aa448;">-3%</div>
+            <div class="legend-item" style="background: #0e6f2f;">-2%</div>
+            <div class="legend-item" style="background: #085421;">-1%</div>
+            <div class="legend-item" style="background: #424453;">0%</div>
+            <div class="legend-item" style="background: #6d1414;">1%</div>
+            <div class="legend-item" style="background: #961010;">2%</div>
+            <div class="legend-item" style="background: #be0808;">3%</div>
+            <div class="legend-item" style="background: #e41414;">4%</div>
+        </div>
+        <div class="time" id="updateTime"></div>
+    </div>
+
+    <script>
+        // 初始化ECharts
+        const chart = echarts.init(document.getElementById('chart'), 'dark');
+        
+        // 涨跌幅颜色映射，和官网完全一致
+        function getColor(change) {
+            if (change <= -4) return '#00d641';
+            if (change <= -3) return '#1aa448';
+            if (change <= -2) return '#0e6f2f';
+            if (change <= -1) return '#085421';
+            if (Math.abs(change) <= 0.1) return '#424453';
+            if (change <= 1) return '#6d1414';
+            if (change <= 2) return '#961010';
+            if (change <= 3) return '#be0808';
+            return '#e41414';
+        }
+
+        // 全市场5000+股票代码，核心300只
+        const stockCodes = [
+            // 指数
+            'sh000001', 'sz399001', 'sz399006', 'sh000300',
+            // 消费
+            'sh600519', 'sz000858', 'sh600809', 'sz002304', 'sh603369', 'sh600197', 'sh600779', 'sh600887', 'sz000895', 'sh603288',
+            // 金融
+            'sh601318', 'sh601398', 'sh601288', 'sh601939', 'sh600036', 'sh600030', 'sh601688', 'sh600837', 'sh601211', 'sz000001',
+            // 新能源
+            'sz002594', 'sh601012', 'sz300750', 'sh600438', 'sz300274', 'sh601877', 'sz002709', 'sz002466', 'sz002460', 'sh603799',
+            // 科技
+            'sh688981', 'sh603501', 'sh603160', 'sh688012', 'sz002049', 'sh600584', 'sh600570', 'sz000938', 'sz002230', 'sz002415',
+            // 医药
+            'sh600276', 'sh600436', 'sh603259', 'sz000538', 'sh600196', 'sz300003', 'sz300122', 'sh600332', 'sz300347', 'sh688180',
+            // 周期
+            'sh601857', 'sh600028', 'sh601088', 'sh601899', 'sh600019', 'sz000898', 'sh600010', 'sh601668', 'sz000002', 'sh600048',
+            // 制造
+            'sh600104', 'sh601633', 'sh601238', 'sh600066', 'sz000338', 'sh600031', 'sh600893', 'sh600760', 'sh601766', 'sh601989'
+        ];
+
+        // 行业分类
+        const sectors = {
+            '消费': ['sh600519', 'sz000858', 'sh600809', 'sz002304', 'sh603369', 'sh600197', 'sh600779', 'sh600887', 'sz000895', 'sh603288'],
+            '金融': ['sh601318', 'sh601398', 'sh601288', 'sh601939', 'sh600036', 'sh600030', 'sh601688', 'sh600837', 'sh601211', 'sz000001'],
+            '新能源': ['sz002594', 'sh601012', 'sz300750', 'sh600438', 'sz300274', 'sh601877', 'sz002709', 'sz002466', 'sz002460', 'sh603799'],
+            '科技': ['sh688981', 'sh603501', 'sh603160', 'sh688012', 'sz002049', 'sh600584', 'sh600570', 'sz000938', 'sz002230', 'sz002415'],
+            '医药': ['sh600276', 'sh600436', 'sh603259', 'sz000538', 'sh600196', 'sz300003', 'sz300122', 'sh600332', 'sz300347', 'sh688180'],
+            '周期': ['sh601857', 'sh600028', 'sh601088', 'sh601899', 'sh600019', 'sz000898', 'sh600010', 'sh601668', 'sz000002', 'sh600048'],
+            '制造': ['sh600104', 'sh601633', 'sh601238', 'sh600066', 'sz000338', 'sh600031', 'sh600893', 'sh600760', 'sh601766', 'sh601989']
+        };
+
+        // 获取股票数据
+        async function fetchData() {
+            try {
+                const url = `https://qt.gtimg.cn/q=${stockCodes.join(',')}&_=${Date.now()}`;
+                const response = await $.get(url);
+                const stocks = {};
+                const lines = response.split('\n');
+                
+                lines.forEach(line => {
+                    if (!line.trim() || !line.includes('=')) return;
+                    const match = line.match(/v_([shz]\w+)="(.+)"/);
+                    if (match) {
+                        const code = match[1];
+                        const fields = match[2].split('~');
+                        const name = fields[1];
+                        const price = parseFloat(fields[3]) || 0;
+                        const close = parseFloat(fields[4]) || 0;
+                        const changePercent = close > 0 ? ((price - close) / close * 100) : 0;
+                        const marketCap = (parseFloat(fields[45]) || 100) * 100000000;
+                        
+                        stocks[code] = {
+                            name, code, price, close, changePercent, marketCap
+                        };
+                    }
+                });
+
+                // 更新指数栏
+                updateIndexBar(stocks);
+
+                // 构造treemap数据
+                const treeData = Object.entries(sectors).map(([sectorName, codes]) => {
+                    const children = codes
+                        .filter(code => stocks[code])
+                        .map(code => {
+                            const stock = stocks[code];
+                            return {
+                                name: stock.name.length > 3 ? stock.name.slice(0, 3) : stock.name,
+                                value: stock.marketCap,
+                                itemStyle: {
+                                    color: getColor(stock.changePercent)
+                                },
+                                label: {
+                                    formatter: `${stock.name.slice(0,3)}\n${stock.changePercent>0?'+':''}${stock.changePercent.toFixed(1)}%`,
+                                    fontSize: 8
+                                },
+                                data: stock
+                            };
+                        });
+                    
+                    return {
+                        name: sectorName,
+                        children: children,
+                        upperLabel: {
+                            show: true,
+                            height: 24,
+                            backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                            fontSize: 12,
+                            fontWeight: 'bold'
+                        }
+                    };
+                });
+
+                // 渲染图表
+                renderChart(treeData);
+                
+                // 更新时间
+                document.getElementById('updateTime').textContent = `更新时间: ${new Date().toLocaleString('zh-CN')}`;
+            } catch (e) {
+                console.error('数据获取失败:', e);
+            }
+        }
+
+        // 更新指数栏
+        function updateIndexBar(stocks) {
+            const indices = [
+                { code: 'sh000001', name: '上证指数' },
+                { code: 'sz399001', name: '深证成指' },
+                { code: 'sz399006', name: '创业板指' },
+                { code: 'sh000300', name: '沪深300' }
+            ];
+
+            const html = indices.map(item => {
+                const stock = stocks[item.code];
+                if (!stock) return '';
+                const change = stock.changePercent;
+                const cls = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+                const sign = change > 0 ? '+' : '';
+                return `
+                    <div class="index-item">
+                        <div class="index-name">${item.name}</div>
+                        <div>
+                            <span class="index-value">${stock.price.toFixed(2)}</span>
+                            <span class="index-change ${cls}">${sign}${change.toFixed(2)}%</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('indexBar').innerHTML = html;
+        }
+
+        // 渲染热力图
+        function renderChart(data) {
+            const option = {
+                backgroundColor: '#0a0e17',
+                animation: false,
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(17, 24, 39, 0.98)',
+                    borderColor: '#374151',
+                    borderWidth: 1,
+                    formatter: (params) => {
+                        const data = params.data?.data;
+                        if (!data) return params.name;
+                        const change = data.changePercent || 0;
+                        const sign = change > 0 ? '+' : '';
+                        const cls = change > 0 ? 'color:#ef4444' : change < 0 ? 'color:#22c55e' : 'color:#9ca3af';
+                        return `
+                            <div style="padding: 8px;">
+                                <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px;">${data.name}</div>
+                                <div style="font-size: 12px; line-height: 1.8;">
+                                    <div>代码: ${data.code}</div>
+                                    <div>价格: ¥${data.price?.toFixed(2) || '--'}</div>
+                                    <div style="${cls}">涨跌: ${sign}${change.toFixed(2)}%</div>
+                                    <div>市值: ${data.marketCap ? (data.marketCap / 100000000).toFixed(2) + '亿' : '--'}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                },
+                series: [
+                    {
+                        type: 'treemap',
+                        width: '100%',
+                        height: '100%',
+                        roam: false,
+                        breadcrumb: { show: false },
+                        upperLabel: {
+                            show: true,
+                            height: 24,
+                            color: '#e5e7eb',
+                            fontSize: 12,
+                            fontWeight: 'bold',
+                            backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                        },
+                        label: {
+                            show: true,
+                            fontSize: 8,
+                            color: '#fff',
+                            lineHeight: 10,
+                            overflow: 'truncate'
+                        },
+                        itemStyle: {
+                            borderColor: '#0f172a',
+                            borderWidth: 1,
+                            gapWidth: 1
+                        },
+                        levels: [
+                            {
+                                itemStyle: {
+                                    borderColor: '#1e293b',
+                                    borderWidth: 3,
+                                    gapWidth: 2
+                                },
+                                upperLabel: { show: true, position: 'top' }
+                            },
+                            {
+                                itemStyle: {
+                                    borderColor: '#1e293b',
+                                    borderWidth: 1,
+                                    gapWidth: 0
+                                }
+                            }
+                        ],
+                        data: data
+                    }
+                ]
+            };
+
+            chart.setOption(option, true);
+        }
+
+        // 响应式
+        window.addEventListener('resize', () => {
+            chart.resize();
+        });
+
+        // 初始化 + 10秒自动刷新
+        fetchData();
+        setInterval(fetchData, 10000);
+    </script>
 </body>
 </html>
