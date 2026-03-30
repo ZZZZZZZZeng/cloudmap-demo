@@ -368,7 +368,7 @@
             allStocks: {}, // 所有股票基础信息
             stockCodes: [], // 所有股票代码
             sectors: {}, // 行业分类
-            indices: ['sh000001', 'sz399001', 'sz399006', 'sh000300'], // 指数代码
+            indices: ['sh000001', 'sz399001', 'sz399006', 'sh000300'], // 指数代码（仅用于顶部指数栏显示）
         };
 
         // 涨跌幅颜色映射，和官网完全一致
@@ -460,8 +460,6 @@
             try {
                 // 先加载核心3000只股票，避免首屏加载过慢
                 const coreStocks = [
-                    // 指数
-                    'sh000001', 'sz399001', 'sz399006', 'sh000300',
                     // 消费
                     'sh600519', 'sz000858', 'sh600809', 'sz002304', 'sh603369', 'sh600197', 'sh600779', 'sh600887', 'sz000895', 'sh603288',
                     // 金融
@@ -478,30 +476,30 @@
                     'sh600104', 'sh601633', 'sh601238', 'sh600066', 'sz000338', 'sh600031', 'sh600893', 'sh600760', 'sh601766', 'sh601989'
                 ];
 
-                // 生成全量股票代码（A股前缀规则）
+                // 生成全量股票代码（A股前缀规则，排除所有指数）
                 const generateStockCodes = () => {
-                    const codes = [...state.indices, ...coreStocks];
-                    // 上证60开头
+                    const codes = [...coreStocks];
+                    // 上证60开头（个股，排除指数sh000xxx）
                     for (let i = 0; i < 2000; i++) {
                         const code = `sh60${String(i).padStart(4, '0')}`;
                         if (!codes.includes(code)) codes.push(code);
                     }
-                    // 科创板688开头
+                    // 科创板688开头（个股）
                     for (let i = 0; i < 1000; i++) {
                         const code = `sh688${String(i).padStart(3, '0')}`;
                         if (!codes.includes(code)) codes.push(code);
                     }
-                    // 深证00开头
+                    // 深证00开头（个股，排除指数sz399xxx）
                     for (let i = 0; i < 1000; i++) {
                         const code = `sz00${String(i).padStart(4, '0')}`;
                         if (!codes.includes(code)) codes.push(code);
                     }
-                    // 创业板30开头
+                    // 创业板30开头（个股）
                     for (let i = 0; i < 1500; i++) {
                         const code = `sz30${String(i).padStart(4, '0')}`;
                         if (!codes.includes(code)) codes.push(code);
                     }
-                    return codes.slice(0, 5000); // 取前5000只
+                    return codes.slice(0, 5000); // 取前5000只个股
                 };
 
                 state.stockCodes = generateStockCodes();
@@ -559,6 +557,9 @@
                         const match = line.match(/v_([shz]\w+)="(.+)"/);
                         if (match) {
                             const code = match[1];
+                            // 过滤指数代码
+                            if (code.startsWith('sh000') || code.startsWith('sz399')) return;
+                            
                             const fields = match[2].split('~');
                             const name = fields[1] || code;
                             const price = parseFloat(fields[3]) || 0;
@@ -568,7 +569,7 @@
 
                             // 简单行业分类
                             let sector = '其他';
-                            if (code.startsWith('sh60') || code.startsWith('sz000')) sector = '主板';
+                            if (code.startsWith('sh60') || code.startsWith('sz00')) sector = '主板';
                             else if (code.startsWith('sz30')) sector = '创业板';
                             else if (code.startsWith('sh688')) sector = '科创板';
 
@@ -614,36 +615,60 @@
 
         // 更新指数栏
         function updateIndexBar() {
-            const indices = [
-                { code: 'sh000001', name: '上证指数' },
-                { code: 'sz399001', name: '深证成指' },
-                { code: 'sz399006', name: '创业板指' },
-                { code: 'sh000300', name: '沪深300' }
-            ];
+            // 单独获取指数数据，不加入热力图
+            const indexCodes = ['sh000001', 'sz399001', 'sz399006', 'sh000300'];
+            const indexUrl = `https://qt.gtimg.cn/q=${indexCodes.join(',')}&_=${Date.now()}`;
+            
+            $.get(indexUrl, function(response) {
+                const indices = [
+                    { code: 'sh000001', name: '上证指数' },
+                    { code: 'sz399001', name: '深证成指' },
+                    { code: 'sz399006', name: '创业板指' },
+                    { code: 'sh000300', name: '沪深300' }
+                ];
 
-            const html = indices.map(item => {
-                const stock = state.allStocks[item.code];
-                if (!stock) return '';
-                const change = stock.changePercent || 0;
-                const cls = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
-                const sign = change > 0 ? '+' : '';
-                return `
-                    <div class="index-item">
-                        <div class="index-name">${item.name}</div>
-                        <div>
-                            <span class="index-value">${stock.price?.toFixed(2) || '--'}</span>
-                            <span class="index-change ${cls}">${sign}${change.toFixed(2)}%</span>
+                const indexData = {};
+                const lines = response.split('\n');
+                lines.forEach(line => {
+                    if (!line.trim() || !line.includes('=')) return;
+                    const match = line.match(/v_([shz]\w+)="(.+)"/);
+                    if (match) {
+                        const code = match[1];
+                        const fields = match[2].split('~');
+                        const price = parseFloat(fields[3]) || 0;
+                        const close = parseFloat(fields[4]) || 0;
+                        const changePercent = close > 0 ? ((price - close) / close * 100) : 0;
+                        indexData[code] = { price, changePercent };
+                    }
+                });
+
+                const html = indices.map(item => {
+                    const stock = indexData[item.code];
+                    if (!stock) return '';
+                    const change = stock.changePercent || 0;
+                    const cls = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+                    const sign = change > 0 ? '+' : '';
+                    return `
+                        <div class="index-item">
+                            <div class="index-name">${item.name}</div>
+                            <div>
+                                <span class="index-value">${stock.price?.toFixed(2) || '--'}</span>
+                                <span class="index-change ${cls}">${sign}${change.toFixed(2)}%</span>
+                            </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
 
-            document.getElementById('indexBar').innerHTML = html;
+                document.getElementById('indexBar').innerHTML = html;
+            });
         }
 
         // 过滤股票数据
         function filterStocks() {
             return Object.values(state.allStocks).filter(stock => {
+                // 过滤所有宽基指数（sh000、sz399开头都是指数）
+                if (stock.code.startsWith('sh000') || stock.code.startsWith('sz399')) return false;
+                
                 // 市场筛选
                 if (state.selectedMarket === 'sh' && !stock.code.startsWith('sh60')) return false;
                 if (state.selectedMarket === 'sz' && !stock.code.startsWith('sz00')) return false;
@@ -795,7 +820,6 @@
             state.isReviewMode = true;
             state.currentReviewIndex = index;
             state.allStocks = state.reviewHistory[index].data;
-            updateIndexBar();
             renderChart();
             updateReviewButtons();
         }
