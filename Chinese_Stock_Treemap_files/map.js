@@ -70,9 +70,9 @@ function drawMap(color, ignoreAuth) {
             }
             return 0;
         });
-    $.getJSON("http://www.z3quant.com/openapi/openjson/tx/" + (tmpCode ? "auth/" : "") + tmpCode + ".json", function(result) {
+    $.getJSON("https://www.z3quant.com/openapi/openjson/tx/" + (tmpCode ? "auth/" : "") + tmpCode + ".json", function(result) {
         // if (result.errCode === -100) {
-        //     document.location.href = "http://www.z3quant.com/dbus/sign.shtml?redirectUrl=" + "http://www.z3quant.com/dbus/map.shtml";
+        //     document.location.href = "https://www.z3quant.com/dbus/sign.shtml?redirectUrl=" + "https://www.z3quant.com/dbus/map.shtml";
         // }
         var nodes = treemap.nodes(result);
         var json = "";
