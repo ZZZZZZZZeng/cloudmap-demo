@@ -479,27 +479,38 @@
                 // 生成全量股票代码（A股前缀规则，排除所有指数）
                 const generateStockCodes = () => {
                     const codes = [...coreStocks];
-                    // 上证60开头（个股，排除指数sh000xxx）
-                    for (let i = 0; i < 2000; i++) {
-                        const code = `sh60${String(i).padStart(4, '0')}`;
-                        if (!codes.includes(code)) codes.push(code);
-                    }
-                    // 科创板688开头（个股）
+                    // 沪市主板 600xxx, 601xxx, 603xxx, 605xxx
                     for (let i = 0; i < 1000; i++) {
-                        const code = `sh688${String(i).padStart(3, '0')}`;
-                        if (!codes.includes(code)) codes.push(code);
+                        const suffix = String(i).padStart(3, '0');
+                        codes.push(`sh600${suffix}`);
+                        codes.push(`sh601${suffix}`);
+                        codes.push(`sh603${suffix}`);
+                        codes.push(`sh605${suffix}`);
                     }
-                    // 深证00开头（个股，排除指数sz399xxx）
+                    // 科创板 688xxx
                     for (let i = 0; i < 1000; i++) {
-                        const code = `sz00${String(i).padStart(4, '0')}`;
-                        if (!codes.includes(code)) codes.push(code);
+                        codes.push(`sh688${String(i).padStart(3, '0')}`);
                     }
-                    // 创业板30开头（个股）
+                    // 深市主板 000xxx, 001xxx
+                    for (let i = 0; i < 1000; i++) {
+                        const suffix = String(i).padStart(3, '0');
+                        codes.push(`sz000${suffix}`);
+                        codes.push(`sz001${suffix}`);
+                    }
+                    // 深市中小板 002xxx, 003xxx
+                    for (let i = 0; i < 1000; i++) {
+                        const suffix = String(i).padStart(3, '0');
+                        codes.push(`sz002${suffix}`);
+                        codes.push(`sz003${suffix}`);
+                    }
+                    // 创业板 300xxx, 301xxx
                     for (let i = 0; i < 1500; i++) {
-                        const code = `sz30${String(i).padStart(4, '0')}`;
-                        if (!codes.includes(code)) codes.push(code);
+                        const suffix = String(i).padStart(3, '0');
+                        codes.push(`sz300${suffix}`);
+                        codes.push(`sz301${suffix}`);
                     }
-                    return codes.slice(0, 5000); // 取前5000只个股
+                    // 去重并返回前5000只
+                    return [...new Set(codes)].slice(0, 5000);
                 };
 
                 state.stockCodes = generateStockCodes();
