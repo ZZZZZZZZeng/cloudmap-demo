@@ -70,10 +70,77 @@ function drawMap(color, ignoreAuth) {
             }
             return 0;
         });
-    $.getJSON("https://www.z3quant.com/openapi/openjson/tx/" + (tmpCode ? "auth/" : "") + tmpCode + ".json", function(result) {
-        // if (result.errCode === -100) {
-        //     document.location.href = "https://www.z3quant.com/dbus/sign.shtml?redirectUrl=" + "https://www.z3quant.com/dbus/map.shtml";
-        // }
+    
+    // 改用腾讯财经API获取数据，兼容跨域
+    const stockCodes = [
+        'sh600519', 'sz000858', 'sh601318', 'sh601398', 'sh601288', 
+        'sz002594', 'sh601012', 'sz300750', 'sh688981', 'sh600036',
+        'sh600030', 'sh601899', 'sz000002', 'sh600000', 'sz000333',
+        'sz000651', 'sh600276', 'sh601857', 'sh600028', 'sh600585',
+        'sh600702', 'sz000568', 'sh600809', 'sz002304', 'sh603369',
+        'sh600197', 'sh600779', 'sh601669', 'sh600438', 'sz300274'
+    ];
+    const url = `https://qt.gtimg.cn/q=${stockCodes.join(',')}&_=${Date.now()}`;
+    
+    $.get(url, function(data) {
+        // 解析腾讯数据
+        const stocks = [];
+        const lines = data.split('\n');
+        lines.forEach(line => {
+            if (!line.trim() || !line.includes('=')) return;
+            const match = line.match(/v_([shz]\w+)="(.+)"/);
+            if (match) {
+                const fields = match[2].split('~');
+                const name = fields[1];
+                const price = parseFloat(fields[3]) || 0;
+                const close = parseFloat(fields[4]) || 0;
+                const changePercent = close > 0 ? ((price - close) / close * 100) : 0;
+                const marketCap = (parseFloat(fields[45]) || 100) * 100000000;
+                
+                stocks.push({
+                    name: name,
+                    value: marketCap,
+                    change: changePercent,
+                    code: match[1],
+                    scale: marketCap
+                });
+            }
+        });
+        
+        // 构造treemap格式数据
+        const result = {
+            name: 'A股',
+            children: [
+                {
+                    name: '消费',
+                    children: stocks.slice(0, 10).map(s => ({
+                        name: s.name,
+                        value: s.value,
+                        scale: s.scale,
+                        condition: s.change
+                    }))
+                },
+                {
+                    name: '金融',
+                    children: stocks.slice(10, 20).map(s => ({
+                        name: s.name,
+                        value: s.value,
+                        scale: s.scale,
+                        condition: s.change
+                    }))
+                },
+                {
+                    name: '新能源',
+                    children: stocks.slice(20, 30).map(s => ({
+                        name: s.name,
+                        value: s.value,
+                        scale: s.scale,
+                        condition: s.change
+                    }))
+                }
+            ]
+        };
+        
         var nodes = treemap.nodes(result);
         var json = "";
         var dateJson = "";
@@ -101,7 +168,7 @@ function drawMap(color, ignoreAuth) {
 
         var zntyMapData = nodes[0];
         zntyInitMap(w, zntyMapData, color, ignoreAuth);
-    })
+    });
 }
 
 //返回 01-12 的月份值
@@ -236,7 +303,7 @@ $(function() {
         valueRangeDivArr = [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6], //股息率
         valueRangeEpsArr = ['-36%', '-27%', '-18%', '-9%', '0%', '9%', '18%', '27%', '36%'], //EPS增长率
         valueRangeEdArr = ['业绩公布前', '业绩公布后'], //业绩公布日
-        valueArrWrap = [valueRange1dArr, valueRange1wArr, valueRange1mArr, valueRange3mArr, valueRange6mArr, valueRange1yArr, valueRangeallArr, valueRangeRelvolArr, valueRangePEGArr, valueRangePsArr, valueRangePbArr, valueRangeDivArr, valueRangePeArr, valueRangeFpeArr, valueRangeEpsArr, valueRangeEdArr];
+        valueArrWrap = [valueRange1dArr, valueRange1wArr, valueRange1mArr, valueRange3mArr, valueRange6mArr, valueRange1yArr, valueRangeallArr, valueRangeRelvolArr, valuePEGArr, valuePsArr, valuePbArr, valueDivArr, valuePeArr, valueFpeArr, valueEpsArr, valueEdArr];
     getRangeLegend(colorArrWrap[0], valueArrWrap[0]);
     var selectedColor = '';
     drawMap(selectedColor, true);
